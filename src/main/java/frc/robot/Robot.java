@@ -30,7 +30,7 @@ public class Robot extends LoggedRobot {
     // Initialzie AdvantageKit logging
     Logger.recordMetadata("ProjectName", "SantosCTRESwerve"); // Set a metadata value
 
-    if (isReal()) {
+    if (isReal() || true) {
       Logger.addDataReceiver(new WPILOGWriter()); // Log to a USB stick ("/U/logs")
       Logger.addDataReceiver(new NT4Publisher()); // Publish data to NetworkTables
       m_distribution = new PowerDistribution(1, ModuleType.kCTRE); // Enables power distribution logging
