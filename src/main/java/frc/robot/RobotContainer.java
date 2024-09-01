@@ -4,12 +4,16 @@
 
 package frc.robot;
 
+import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
+
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
+import com.pathplanner.lib.auto.AutoBuilder;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
@@ -27,6 +31,8 @@ public class RobotContainer {
   private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
 
   private final Telemetry logger = new Telemetry(RobotConstants.Drivetrain.MaxSpeed);
+
+  private LoggedDashboardChooser<Command> autoChooser;
 
   private void configureBindings() {
     // Joystick X is left/right, and Y is up/down, but field X is forward, and Y is sideways. Also, axes are all inverted.
@@ -48,9 +54,13 @@ public class RobotContainer {
 
   public RobotContainer() {
     configureBindings();
+
+    // Build an auto chooser. This will use Commands.none() as the default option.
+    autoChooser = new LoggedDashboardChooser<Command>("Auto Path", AutoBuilder.buildAutoChooser("NearNotes"));
+
   }
 
   public Command getAutonomousCommand() {
-    return Commands.print("No autonomous command configured");
+    return autoChooser.get();
   }
 }
