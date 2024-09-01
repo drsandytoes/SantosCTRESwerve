@@ -1,5 +1,7 @@
 package frc.robot.vision;
 
+import org.littletonrobotics.junction.AutoLog;
+import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.math.VecBuilder;
@@ -11,15 +13,17 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.util.RectanglePoseArea;
+import frc.robot.vision.LimelightIO.LimelightIOInputs;
 
 public class Limelight extends SubsystemBase {
+  LimelightIO io;
+  LimelightIOInputsAutoLogged inputs = new LimelightIOInputsAutoLogged();
   CommandSwerveDrivetrain drivetrain;
-  private String limelightName = "limelight";
+
   private Boolean enabled = false;
   private Boolean alwaysTrust = false;
-  private int fieldError = 0;
-  private int distanceError = 0;
-  private Pose2d botpose;
+  @AutoLogOutput private int fieldError = 0;
+  @AutoLogOutput private int distanceError = 0;
 
   // Create a bounding box for the field so that we can reject obvious wrong locations. We can assume that the
   // robot didn't break through the field barrier, and even if it did, we'd be quickly disabled by FMS...
@@ -27,7 +31,8 @@ public class Limelight extends SubsystemBase {
         new RectanglePoseArea(new Translation2d(0.0, 0.0), new Translation2d(16.54, 8.02));
 
   /** Creates a new Limelight. */
-  public Limelight(CommandSwerveDrivetrain drivetrain) {
+  public Limelight(LimelightIO io, CommandSwerveDrivetrain drivetrain) {
+    this.io = io;
     this.drivetrain = drivetrain;
     SmartDashboard.putNumber("Field Error", fieldError);
     SmartDashboard.putNumber("Limelight Error", distanceError);
@@ -37,26 +42,22 @@ public class Limelight extends SubsystemBase {
 
   @Override
   public void periodic() {
+    io.updateInputs(inputs);
     if (enabled) {
-      Double targetDistance = LimelightHelpers.getTargetPose3d_CameraSpace(limelightName).getTranslation().getDistance(new Translation3d());
-      Double confidence = 1 - ((targetDistance - 1) / 6);
-      LimelightHelpers.LimelightResults result =
-          LimelightHelpers.getLatestResults(limelightName);
-      if (result.valid) {
-        botpose = LimelightHelpers.getBotPose2d_wpiBlue(limelightName);
-
+      double confidence = 1 - ((inputs.targetDistance - 1) / 6);
+      if (inputs.valid) {
         // Reject position updates that put us outside of the field
-        if (field.isPoseWithinArea(botpose)) {
+        if (field.isPoseWithinArea(inputs.botpose)) {
           // Reject updates that are more than 0.5m unless we're in always-trust mode, or we can see more than 
           // one April tag.
-          if (drivetrain.getState().Pose.getTranslation().getDistance(botpose.getTranslation()) < 0.5
+          if (drivetrain.getState().Pose.getTranslation().getDistance(inputs.botpose.getTranslation()) < 0.5
               || alwaysTrust
-              || result.targets_Fiducials.length > 1) {
+              || inputs.fiducialMarkerCount > 1) {
             drivetrain.addVisionMeasurement(
-                botpose,
-                Logger.getRealTimestamp() // MDS TODO: Move this to a capture input stage
-                    - (result.latency_capture / 1000.0)
-                    - (result.latency_pipeline / 1000.0),
+                inputs.botpose,
+                Timer.getFPGATimestamp() 
+                    - (inputs.latency_capture / 1000.0)
+                    - (inputs.latency_pipeline / 1000.0),
                 VecBuilder.fill(confidence, confidence, .01));
           } else {
             distanceError++;

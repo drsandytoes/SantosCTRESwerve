@@ -46,6 +46,7 @@ public class DefaultDrive extends Command {
     driveAtAngle.HeadingController.setPID(RobotConstants.Drivetrain.HeadingController.kP, 
       RobotConstants.Drivetrain.HeadingController.kI, 
       RobotConstants.Drivetrain.HeadingController.kD);
+    driveAtAngle.HeadingController.enableContinuousInput(-Math.PI, Math.PI);
 
     this.drivetrain = drivetrain;
     addRequirements(drivetrain);

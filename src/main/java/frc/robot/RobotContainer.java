@@ -8,6 +8,7 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
+import com.google.flatbuffers.Constants;
 import com.pathplanner.lib.auto.AutoBuilder;
 
 import edu.wpi.first.math.geometry.Pose2d;
@@ -21,13 +22,15 @@ import frc.robot.commands.DefaultDrive;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.vision.Limelight;
+import frc.robot.vision.LimelightIO;
+import frc.robot.vision.LimelightIOReal;
 
 public class RobotContainer {
 
   /* Setting up bindings for necessary control of the swerve drive platform */
   private final CommandPS4Controller joystick = new CommandPS4Controller(0); // My joystick
   private final CommandSwerveDrivetrain drivetrain = TunerConstants.DriveTrain; // My drivetrain
-  private final Limelight limelight = new Limelight(drivetrain);
+  private final Limelight limelight;
 
   private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
   private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
@@ -60,8 +63,25 @@ public class RobotContainer {
     // Build an auto chooser. This will use Commands.none() as the default option.
     autoChooser = new LoggedDashboardChooser<Command>("Auto Path", AutoBuilder.buildAutoChooser("NearNotes"));
 
-    // Enable vision measurements
-    limelight.useLimelight(RobotConstants.Vision.enabled);
+    switch (RobotConstants.currentMode) {
+      case REAL:
+        // Real robot, instantiate hardware IO implementations
+        limelight = new Limelight(new LimelightIOReal(), drivetrain);
+        limelight.useLimelight(RobotConstants.Vision.enabled);
+        break;
+
+      case SIM:
+        // Sim robot, instantiate physics sim IO implementations
+        limelight = new Limelight(new LimelightIOReal(), drivetrain);
+        limelight.useLimelight(false);
+        break;
+
+      default:
+        // Replayed robot, disable IO implementations
+        limelight = new Limelight(new LimelightIO() {}, drivetrain);
+        limelight.useLimelight(RobotConstants.Vision.enabled);
+        break;
+    }
   }
 
   public Command getAutonomousCommand() {

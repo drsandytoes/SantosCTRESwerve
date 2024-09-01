@@ -3,6 +3,14 @@ package frc.robot;
 import frc.robot.generated.TunerConstants;
 
 public final class RobotConstants {
+    public static final Mode currentMode = Mode.REAL;
+
+    public static enum Mode {
+      REAL,
+      SIM,
+      REPLAY
+    }
+  
     public final class Driver {
         public static final double deadband = 0.1;
     }
@@ -20,5 +28,6 @@ public final class RobotConstants {
 
     public final class Vision {
         public static final boolean enabled = true;
+        public static final String limelightName = "limelight";
     }
 }
