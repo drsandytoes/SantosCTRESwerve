@@ -42,6 +42,10 @@ public class DefaultDrive extends Command {
     this.ySupplier = ySupplier;
     this.thetaSupplier = thetaSupplier;
 
+    driveAtAngle.HeadingController.setPID(RobotConstants.Drivetrain.HeadingController.kP, 
+      RobotConstants.Drivetrain.HeadingController.kI, 
+      RobotConstants.Drivetrain.HeadingController.kD);
+
     this.drivetrain = drivetrain;
     addRequirements(drivetrain);
   }
