@@ -20,12 +20,14 @@ import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
 import frc.robot.commands.DefaultDrive;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.vision.Limelight;
 
 public class RobotContainer {
 
   /* Setting up bindings for necessary control of the swerve drive platform */
   private final CommandPS4Controller joystick = new CommandPS4Controller(0); // My joystick
   private final CommandSwerveDrivetrain drivetrain = TunerConstants.DriveTrain; // My drivetrain
+  private final Limelight limelight = new Limelight(drivetrain);
 
   private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
   private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
@@ -58,6 +60,8 @@ public class RobotContainer {
     // Build an auto chooser. This will use Commands.none() as the default option.
     autoChooser = new LoggedDashboardChooser<Command>("Auto Path", AutoBuilder.buildAutoChooser("NearNotes"));
 
+    // Enable vision measurements
+    limelight.useLimelight(RobotConstants.Vision.enabled);
   }
 
   public Command getAutonomousCommand() {

@@ -42,6 +42,7 @@ public class DefaultDrive extends Command {
     this.ySupplier = ySupplier;
     this.thetaSupplier = thetaSupplier;
 
+    // Set the PID constants for the built-in heading controller
     driveAtAngle.HeadingController.setPID(RobotConstants.Drivetrain.HeadingController.kP, 
       RobotConstants.Drivetrain.HeadingController.kI, 
       RobotConstants.Drivetrain.HeadingController.kD);

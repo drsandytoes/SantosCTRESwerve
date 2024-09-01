@@ -17,4 +17,8 @@ public final class RobotConstants {
             public static final double kD = 0.0;
         }
     }
+
+    public final class Vision {
+        public static final boolean enabled = true;
+    }
 }
