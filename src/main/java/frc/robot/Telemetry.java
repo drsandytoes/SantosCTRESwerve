@@ -7,11 +7,13 @@ import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StringPublisher;
+import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.wpilibj.smartdashboard.Mechanism2d;
 import edu.wpi.first.wpilibj.smartdashboard.MechanismLigament2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -75,6 +77,11 @@ public class Telemetry {
             .append(new MechanismLigament2d("Direction", 0.1, 0, 0, new Color8Bit(Color.kWhite))),
     };
 
+    // MDS: Publish desired and actual module states so AdvantageScope can see them
+    private final NetworkTable moduleStats = inst.getTable("Modules");
+    StructArrayPublisher<SwerveModuleState> desiredStatePublisher = moduleStats.getStructArrayTopic("DesiredModuleState", SwerveModuleState.struct).publish();
+    StructArrayPublisher<SwerveModuleState> actualStatePublisher = moduleStats.getStructArrayTopic("ActualModuleState", SwerveModuleState.struct).publish();
+
     /* Accept the swerve drive state and telemeterize it to smartdashboard */
     public void telemeterize(SwerveDriveState state) {
         /* Telemeterize the pose */
@@ -110,7 +117,7 @@ public class Telemetry {
         }
 
         // MDS: AdvantageKit
-        Logger.recordOutput("ActualModuleStates", state.ModuleStates);
-        Logger.recordOutput("TargetModuleStates", state.ModuleTargets);
+        actualStatePublisher.set(state.ModuleStates);
+        desiredStatePublisher.set(state.ModuleTargets);
     }
 }

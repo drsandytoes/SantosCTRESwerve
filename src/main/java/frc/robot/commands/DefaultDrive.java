@@ -7,6 +7,7 @@ import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.RobotConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
@@ -80,9 +81,24 @@ public class DefaultDrive extends Command {
           .withRotationalRate(thetaSpeed));
     } else {
         // Driver is not rotating the robot. If they were the last time this was called, latch the current heading
-        // as the one desired by the driver.
+        // as the one desired by the driver. We might want to delay the latch to account for intertia. When the driver
+        // stops rotating, the robot would normally still rotate for a short period of time, and it may feel weird
+        // for that to be cut off. It also may make it difficult to make fine adjustments to the heading, so there's
+        // opportunity to improve this based on driver feedback.
         if (driverIsRotatingRobot) {
-            savedHeading = drivetrain.getState().Pose.getRotation();
+          double currentAngleRad = drivetrain.getState().Pose.getRotation().getRadians();
+          currentAngleRad = MathUtil.angleModulus(currentAngleRad);
+          savedHeading = Rotation2d.fromRadians(currentAngleRad);
+
+          // Pose is blue-alliance field centric standard. But if the drive train is operator-relative and we're on the red
+          // alliance, we need to rotate the heading 180 degrees. We do this here before saving it so we don't need to do
+          // the math repeatedly.
+          var alliance = DriverStation.getAlliance();
+          if (alliance.isPresent()) {
+            if (alliance.get() == DriverStation.Alliance.Red) {
+              savedHeading = savedHeading.rotateBy(Rotation2d.fromDegrees(180.0));
+            }
+          }
         }
         driverIsRotatingRobot = false;
 
