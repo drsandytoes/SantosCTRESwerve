@@ -27,64 +27,69 @@ import frc.robot.vision.LimelightIOReal;
 
 public class RobotContainer {
 
-  /* Setting up bindings for necessary control of the swerve drive platform */
-  private final CommandPS4Controller joystick = new CommandPS4Controller(0); // My joystick
-  private final CommandSwerveDrivetrain drivetrain = TunerConstants.DriveTrain; // My drivetrain
-  private final Limelight limelight;
+    /* Setting up bindings for necessary control of the swerve drive platform */
+    private final CommandPS4Controller joystick = new CommandPS4Controller(0); // My joystick
+    private final CommandSwerveDrivetrain drivetrain = TunerConstants.DriveTrain; // My drivetrain
+    private final Limelight limelight;
 
-  private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
-  private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
+    private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
+    private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
 
-  private final Telemetry logger = new Telemetry(RobotConstants.Drivetrain.MaxSpeed);
+    private final Telemetry logger = new Telemetry(RobotConstants.Drivetrain.MaxSpeed);
 
-  private LoggedDashboardChooser<Command> autoChooser;
+    private LoggedDashboardChooser<Command> autoChooser;
 
-  private void configureBindings() {
-    // Joystick X is left/right, and Y is up/down, but field X is forward, and Y is sideways. Also, axes are all inverted.
-    // We invert the inputs and map them to the corret axes so everything else can deal with FRC coordinates.
-    drivetrain.setDefaultCommand(new DefaultDrive(() -> -joystick.getLeftY(), () -> -joystick.getLeftX(), () -> -joystick.getRightX(), drivetrain));
+    private void configureBindings() {
+        // Joystick X is left/right, and Y is up/down, but field X is forward, and Y is
+        // sideways. Also, axes are all inverted.
+        // We invert the inputs and map them to the corret axes so everything else can
+        // deal with FRC coordinates.
+        drivetrain.setDefaultCommand(new DefaultDrive(() -> -joystick.getLeftY(), () -> -joystick.getLeftX(),
+                () -> -joystick.getRightX(), drivetrain));
 
-    joystick.share().whileTrue(drivetrain.applyRequest(() -> brake));
-    joystick.options().whileTrue(drivetrain
-        .applyRequest(() -> point.withModuleDirection(new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))));
+        joystick.share().whileTrue(drivetrain.applyRequest(() -> brake));
+        joystick.options().whileTrue(drivetrain
+                .applyRequest(
+                        () -> point.withModuleDirection(new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))));
 
-    // reset the field-centric heading on left bumper press
-    joystick.touchpad().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldRelative()));
+        // reset the field-centric heading on left bumper press
+        joystick.touchpad().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldRelative()));
 
-    if (Utils.isSimulation()) {
-      drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
+        if (Utils.isSimulation()) {
+            drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
+        }
+        drivetrain.registerTelemetry(logger::telemeterize);
     }
-    drivetrain.registerTelemetry(logger::telemeterize);
-  }
 
-  public RobotContainer() {
-    configureBindings();
+    public RobotContainer() {
+        configureBindings();
 
-    // Build an auto chooser. This will use Commands.none() as the default option.
-    autoChooser = new LoggedDashboardChooser<Command>("Auto Path", AutoBuilder.buildAutoChooser("NearNotes"));
+        // Build an auto chooser. This will use Commands.none() as the default option.
+        autoChooser = new LoggedDashboardChooser<Command>("Auto Path", AutoBuilder.buildAutoChooser("NearNotes"));
 
-    switch (RobotConstants.currentMode) {
-      case REAL:
-        // Real robot, instantiate hardware IO implementations
-        limelight = new Limelight(new LimelightIOReal(), drivetrain);
-        limelight.useLimelight(RobotConstants.Vision.enabled);
-        break;
+        switch (RobotConstants.currentMode) {
+            case REAL:
+                // Real robot, instantiate hardware IO implementations
+                limelight = new Limelight(new LimelightIOReal(), drivetrain);
+                limelight.useLimelight(RobotConstants.Vision.enabled);
+                break;
 
-      case SIM:
-        // Sim robot, instantiate physics sim IO implementations
-        limelight = new Limelight(new LimelightIOReal(), drivetrain);
-        limelight.useLimelight(false);
-        break;
+            case SIM:
+                // Sim robot, instantiate physics sim IO implementations
+                limelight = new Limelight(new LimelightIOReal(), drivetrain);
+                limelight.useLimelight(false);
+                break;
 
-      default:
-        // Replayed robot, disable IO implementations
-        limelight = new Limelight(new LimelightIO() {}, drivetrain);
-        limelight.useLimelight(RobotConstants.Vision.enabled);
-        break;
+            default:
+                // Replayed robot, disable IO implementations
+                limelight = new Limelight(new LimelightIO() {
+                }, drivetrain);
+                limelight.useLimelight(RobotConstants.Vision.enabled);
+                break;
+        }
     }
-  }
 
-  public Command getAutonomousCommand() {
-    return autoChooser.get();
-  }
+    public Command getAutonomousCommand() {
+        return autoChooser.get();
+    }
 }
