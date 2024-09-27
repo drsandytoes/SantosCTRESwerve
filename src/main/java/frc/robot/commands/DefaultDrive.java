@@ -18,10 +18,8 @@ public class DefaultDrive extends Command {
 
     private final SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
             .withDeadband(RobotConstants.Drivetrain.MaxSpeed * RobotConstants.Driver.deadband)
-            .withRotationalDeadband(RobotConstants.Drivetrain.MaxAngularRate * RobotConstants.Driver.deadband) // Add a
-                                                                                                               // 10%
-                                                                                                               // deadband
-            .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // I want field-centric
+            .withRotationalDeadband(RobotConstants.Drivetrain.MaxAngularRate * RobotConstants.Driver.deadband)                                                                                                                // deadband
+            .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
     private final SwerveRequest.FieldCentricFacingAngle driveAtAngle = new SwerveRequest.FieldCentricFacingAngle()
             .withDeadband(RobotConstants.Drivetrain.MaxSpeed * RobotConstants.Driver.deadband)
