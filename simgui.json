@@ -1,4 +1,13 @@
 {
+  "HALProvider": {
+    "Other Devices": {
+      "Pigeon 2 (v6)[1]": {
+        "header": {
+          "open": true
+        }
+      }
+    }
+  },
   "NTProvider": {
     "types": {
       "/FMSInfo": "FMSInfo",
@@ -49,5 +58,8 @@
       }
     },
     "visible": true
+  },
+  "NetworkTables View": {
+    "visible": false
   }
 }

@@ -13,6 +13,7 @@ public final class RobotConstants {
   
     public final class Driver {
         public static final double deadband = 0.1;
+        public static final boolean useHeadingController = true;
     }
 
     public final class Drivetrain {

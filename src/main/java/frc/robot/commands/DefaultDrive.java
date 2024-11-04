@@ -1,5 +1,6 @@
 package frc.robot.commands;
 
+import java.util.Optional;
 import java.util.function.DoubleSupplier;
 
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
@@ -8,6 +9,8 @@ import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.RobotConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
@@ -29,9 +32,10 @@ public class DefaultDrive extends Command {
     // providing rotational input, we want
     // to try to maintain the orientation of the robot when the driver last stopped
     // providing rotational input.
+
     protected Rotation2d savedHeading;
     protected boolean driverIsRotatingRobot = true;
-    protected boolean useHeadingController = true;
+    protected boolean useHeadingController = RobotConstants.Driver.useHeadingController;
 
     /**
      * Drive command that uses joystick input (corrected for FRC coordinates).
@@ -46,6 +50,7 @@ public class DefaultDrive extends Command {
         this.xSupplier = xSupplier;
         this.ySupplier = ySupplier;
         this.thetaSupplier = thetaSupplier;
+        savedHeading = new Rotation2d();
 
         // Set the PID constants for the built-in heading controller
         driveAtAngle.HeadingController.setPID(RobotConstants.Drivetrain.HeadingController.kP,
@@ -55,6 +60,8 @@ public class DefaultDrive extends Command {
 
         this.drivetrain = drivetrain;
         addRequirements(drivetrain);
+
+        Shuffleboard.getTab("Driver").addDouble("Saved Heading", () -> savedHeading.getDegrees());
     }
 
     @Override
@@ -76,15 +83,7 @@ public class DefaultDrive extends Command {
         double ySpeed = y * RobotConstants.Drivetrain.MaxSpeed;
         double thetaSpeed = theta * RobotConstants.Drivetrain.MaxAngularRate;
 
-        if (!useHeadingController || Math.abs(deadbandedTheta) > 0.001) {
-            // There is rotational input (or we're not using the heading controller)
-            driverIsRotatingRobot = true;
-
-            // Pass all of the speeds to the drive train
-            drivetrain.setControl(drive.withVelocityX(xSpeed)
-                    .withVelocityY(ySpeed)
-                    .withRotationalRate(thetaSpeed));
-        } else {
+        if (Math.abs(deadbandedTheta) < 0.001) {
             // Driver is not rotating the robot. If they were the last time this was called,
             // latch the current heading
             // as the one desired by the driver. We might want to delay the latch to account
@@ -97,7 +96,7 @@ public class DefaultDrive extends Command {
             if (driverIsRotatingRobot) {
                 double currentAngleRad = drivetrain.getState().Pose.getRotation().getRadians();
                 currentAngleRad = MathUtil.angleModulus(currentAngleRad);
-                savedHeading = Rotation2d.fromRadians(currentAngleRad);
+                Rotation2d headingToLock = Rotation2d.fromRadians(currentAngleRad);
 
                 // Pose is blue-alliance field centric standard. But if the drive train is
                 // operator-relative and we're on the red
@@ -107,12 +106,24 @@ public class DefaultDrive extends Command {
                 var alliance = DriverStation.getAlliance();
                 if (alliance.isPresent()) {
                     if (alliance.get() == DriverStation.Alliance.Red) {
-                        savedHeading = savedHeading.rotateBy(Rotation2d.fromDegrees(180.0));
+                        headingToLock = headingToLock.rotateBy(Rotation2d.fromDegrees(180.0));
                     }
                 }
+                savedHeading = headingToLock;
             }
             driverIsRotatingRobot = false;
+        } else {
+            driverIsRotatingRobot = true;
+        }
 
+        if (!useHeadingController || driverIsRotatingRobot) {
+            // There is rotational input (or we're not using the heading controller)
+
+            // Pass all of the speeds to the drive train
+            drivetrain.setControl(drive.withVelocityX(xSpeed)
+                    .withVelocityY(ySpeed)
+                    .withRotationalRate(thetaSpeed));
+        } else {
             // Pass x/y speeds, but use the saved heading as the direction. If the robot
             // bumps into something, it will
             // try to go back to the saved angle.

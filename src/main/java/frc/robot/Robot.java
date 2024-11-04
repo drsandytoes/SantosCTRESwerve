@@ -11,10 +11,9 @@ import org.littletonrobotics.junction.networktables.NT4Publisher;
 import org.littletonrobotics.junction.wpilog.WPILOGReader;
 import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 
-import edu.wpi.first.hal.AllianceStationID;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.PowerDistribution;
-import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
-import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
@@ -90,6 +89,13 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void disabledExit() {
+        // HACK!!
+        // If we're only testing teleop, we'd really like for the robot to be facing forward wrt. to the driver, which means
+        // facing the blue alliance wall when enabled from a red alliance driver stations. But we do NOT want to do this 
+        // regularly, and certainly not during competition. 
+        DriverStation.getAlliance().ifPresent((allianceColor) -> {
+            m_robotContainer.setStartingPoseForAlliance(allianceColor);
+        });
     }
 
     @Override

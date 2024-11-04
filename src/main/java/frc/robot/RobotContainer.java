@@ -4,19 +4,22 @@
 
 package frc.robot;
 
+import java.sql.Driver;
+
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
-import com.google.flatbuffers.Constants;
+import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
 import com.pathplanner.lib.auto.AutoBuilder;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.DataLogManager;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
 import frc.robot.commands.DefaultDrive;
 import frc.robot.generated.TunerConstants;
@@ -52,9 +55,19 @@ public class RobotContainer {
                 .applyRequest(
                         () -> point.withModuleDirection(new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))));
 
-        // reset the field-centric heading on left bumper press
-        joystick.touchpad().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldRelative()));
-
+        // reset the field-centric heading on touchpad press. CTRE just calls seedFieldRelative() by default, but that
+        // just records an offset without adjusting the pose, which really makes a heading controller unhappy. We really
+        // want to reset the pose here to be facing forward.
+        // CTRE: joystick.touchpad().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldRelative()));
+        joystick.touchpad().onTrue(drivetrain.runOnce(() -> {
+            var alliance = DriverStation.getAlliance();
+            if (alliance.isPresent()) {
+                resetPoseForward(alliance.get());
+            } else {
+                resetPoseForward(Alliance.Blue);
+            }
+        }));
+        
         if (Utils.isSimulation()) {
             drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
         }
@@ -91,5 +104,31 @@ public class RobotContainer {
 
     public Command getAutonomousCommand() {
         return autoChooser.get();
+    }
+
+    public void setStartingPoseForAlliance(Alliance alliance) {
+        DataLogManager.log("SEEDING INITIAL POSITION");
+        if (alliance == Alliance.Red) { 
+            // Start at red origin, but facing blue alliance wall
+            DataLogManager.log("INITIAL POSITION: RED ALLIANCE");
+            drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(180)));
+        } else {
+            // Start at blue origina
+            DataLogManager.log("INITIAL POSITION: BLUE ALLIANCE");
+            drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(0)));
+        }
+    }
+
+    public void resetPoseForward(Alliance alliance) {
+        Pose2d currentPose = drivetrain.getState().Pose;
+        if (alliance == Alliance.Red) { 
+            // Start at red origin, but facing blue alliance wall
+            DataLogManager.log("RESETTING FORWARD: RED ALLIANCE");
+            drivetrain.seedFieldRelative(new Pose2d(currentPose.getX(), currentPose.getY(), Rotation2d.fromDegrees(180)));
+        } else {
+            // Start at blue origina
+            DataLogManager.log("RESETTING FORWARD: BLUE ALLIANCE");
+            drivetrain.seedFieldRelative(new Pose2d(currentPose.getX(), currentPose.getY(), Rotation2d.fromDegrees(0)));
+        }
     }
 }
