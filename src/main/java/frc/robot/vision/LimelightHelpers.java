@@ -1,6 +1,7 @@
 //LimelightHelpers v1.9 (REQUIRES 2024.9.1)
 
 package frc.robot.vision;
+import frc.robot.util.MathUtils;
 
 import edu.wpi.first.networktables.DoubleArrayEntry;
 import edu.wpi.first.networktables.NetworkTable;
@@ -452,7 +453,7 @@ public class LimelightHelpers {
          * Makes a PoseEstimate object with default values
          */
         public PoseEstimate() {
-            this.pose = new Pose2d();
+            this.pose = MathUtils.pose.zero;
             this.timestampSeconds = 0;
             this.latency = 0;
             this.tagCount = 0;
@@ -508,7 +509,7 @@ public class LimelightHelpers {
         if(inData.length < 6)
         {
             //System.err.println("Bad LL 2D Pose Data!");
-            return new Pose2d();
+            return MathUtils.pose.zero;
         }
         Translation2d tran2d = new Translation2d(inData[0], inData[1]);
         Rotation2d r2d = new Rotation2d(Units.degreesToRadians(inData[5]));

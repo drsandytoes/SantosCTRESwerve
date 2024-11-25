@@ -1,9 +1,12 @@
 package frc.robot;
 
+import com.ctre.phoenix6.Utils;
+
 import frc.robot.generated.TunerConstants;
 
 public final class RobotConstants {
-    public static final Mode currentMode = Mode.REAL;
+    // Change this when we want to do replay
+    public static final Mode currentMode = Utils.isSimulation() ? Mode.SIM : Mode.REAL;
 
     public static enum Mode {
       REAL,

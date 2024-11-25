@@ -11,6 +11,8 @@ import org.littletonrobotics.junction.networktables.NT4Publisher;
 import org.littletonrobotics.junction.wpilog.WPILOGReader;
 import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 
+import com.ctre.phoenix6.SignalLogger;
+
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.PowerDistribution;
@@ -70,6 +72,10 @@ public class Robot extends LoggedRobot {
         // the "Understanding Data Flow" page
         Logger.start(); // Start logging! No more data receivers, replay sources, or metadata values may
                         // be added.
+
+        // Setup Phoenix logging
+        SignalLogger.setPath("/media/sda1/ctre-logs/"); // Write to the (first) USB disk in the ctre-logs directory
+        SignalLogger.start(); // Force Phoenix logging even if when not in an FRC event
 
         m_robotContainer = new RobotContainer();
     }

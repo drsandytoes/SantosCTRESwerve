@@ -21,6 +21,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
 import frc.robot.commands.DefaultDrive;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.util.MathUtils;
 import frc.robot.vision.Limelight;
 import frc.robot.vision.LimelightIO;
 import frc.robot.vision.LimelightIOReal;
@@ -66,7 +67,7 @@ public class RobotContainer {
         }));
         
         if (Utils.isSimulation()) {
-            drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
+            drivetrain.seedFieldRelative(new Pose2d(MathUtils.translation.zero, MathUtils.rotation.quarter));
         }
         drivetrain.registerTelemetry(logger::telemeterize);
     }
@@ -108,11 +109,11 @@ public class RobotContainer {
         if (alliance == Alliance.Red) { 
             // Start at red origin, but facing blue alliance wall
             DataLogManager.log("INITIAL POSITION: RED ALLIANCE");
-            drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(180)));
+            drivetrain.seedFieldRelative(new Pose2d(MathUtils.translation.zero, MathUtils.rotation.half));
         } else {
             // Start at blue origina
             DataLogManager.log("INITIAL POSITION: BLUE ALLIANCE");
-            drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(0)));
+            drivetrain.seedFieldRelative(new Pose2d(MathUtils.translation.zero, MathUtils.rotation.zero));
         }
     }
 
@@ -121,11 +122,11 @@ public class RobotContainer {
         if (alliance == Alliance.Red) { 
             // Start at red origin, but facing blue alliance wall
             DataLogManager.log("RESETTING FORWARD: RED ALLIANCE");
-            drivetrain.seedFieldRelative(new Pose2d(currentPose.getX(), currentPose.getY(), Rotation2d.fromDegrees(180)));
+            drivetrain.seedFieldRelative(new Pose2d(currentPose.getX(), currentPose.getY(), MathUtils.rotation.half));
         } else {
             // Start at blue origina
             DataLogManager.log("RESETTING FORWARD: BLUE ALLIANCE");
-            drivetrain.seedFieldRelative(new Pose2d(currentPose.getX(), currentPose.getY(), Rotation2d.fromDegrees(0)));
+            drivetrain.seedFieldRelative(new Pose2d(currentPose.getX(), currentPose.getY(), MathUtils.rotation.zero));
         }
     }
 }

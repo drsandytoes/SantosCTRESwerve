@@ -12,6 +12,7 @@ import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.RobotConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.util.MathUtils;
 
 public class DefaultDrive extends Command {
     protected CommandSwerveDrivetrain drivetrain;
@@ -97,14 +98,13 @@ public class DefaultDrive extends Command {
                 Rotation2d headingToLock = Rotation2d.fromRadians(currentAngleRad);
 
                 // Pose is blue-alliance field centric standard. But if the drive train is
-                // operator-relative and we're on the red
-                // alliance, we need to rotate the heading 180 degrees. We do this here before
-                // saving it so we don't need to do
+                // operator-relative and we're on the red alliance, we need to rotate the 
+                // heading 180 degrees. We do this here before saving it so we don't need to do
                 // the math repeatedly.
                 var alliance = DriverStation.getAlliance();
                 if (alliance.isPresent()) {
                     if (alliance.get() == DriverStation.Alliance.Red) {
-                        headingToLock = headingToLock.rotateBy(Rotation2d.fromDegrees(180.0));
+                        headingToLock = headingToLock.rotateBy(MathUtils.rotation.half);
                     }
                 }
                 savedHeading = headingToLock;

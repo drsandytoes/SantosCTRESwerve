@@ -3,12 +3,13 @@ package frc.robot.vision;
 import org.littletonrobotics.junction.AutoLog;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import frc.robot.util.MathUtils;
 
 public interface LimelightIO {
     @AutoLog
     public static class LimelightIOInputs {
         double targetDistance = 0.0;
-        Pose2d botpose = new Pose2d();
+        Pose2d botpose = MathUtils.pose.zero;
 
         // Things we use out of the results object
         boolean valid = false;
