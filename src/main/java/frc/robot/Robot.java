@@ -26,6 +26,11 @@ public class Robot extends LoggedRobot {
 
     private PowerDistribution m_distribution; // Not used, but avoids the resource leak warning
 
+    // Keep track of whether we've ever been enabled so we can set the right starting pose 
+    // depending on the alliance color. (Red will assume that forward is facing away from them,
+    // which means a starting pose of 180 degrees.)
+    private boolean hasEverBeenEnabled = false;
+
     @Override
     public void robotInit() {
         // Initialzie AdvantageKit logging
@@ -95,17 +100,12 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void disabledExit() {
-        // HACK!!
-        // If we're only testing teleop, we'd really like for the robot to be facing forward wrt. to the driver, which means
-        // facing the blue alliance wall when enabled from a red alliance driver stations. But we do NOT want to do this 
-        // regularly, and certainly not during competition. 
-        DriverStation.getAlliance().ifPresent((allianceColor) -> {
-            m_robotContainer.setStartingPoseForAlliance(allianceColor);
-        });
     }
 
     @Override
     public void autonomousInit() {
+        setStartingPoseOnEnableOnce();
+
         m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
         if (m_autonomousCommand != null) {
@@ -123,6 +123,8 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void teleopInit() {
+        setStartingPoseOnEnableOnce();
+        
         if (m_autonomousCommand != null) {
             m_autonomousCommand.cancel();
         }
@@ -153,5 +155,17 @@ public class Robot extends LoggedRobot {
     public void simulationPeriodic() {
         // Enable if you want to force the simulator to a specific alliance/station.
         // DriverStationSim.setAllianceStationId(AllianceStationID.Blue1);
+    }
+
+    private void setStartingPoseOnEnableOnce() {
+        // If we're only testing teleop, we'd really like for the robot to be facing forward wrt. to the driver, which means
+        // facing the blue alliance wall when enabled from a red alliance driver stations. But we do NOT want to do this 
+        // regularly, and certainly not during competition. 
+        if (!hasEverBeenEnabled) {
+            DriverStation.getAlliance().ifPresent((allianceColor) -> {
+                m_robotContainer.setStartingPoseForAlliance(allianceColor);
+                hasEverBeenEnabled = true;
+            });
+        }
     }
 }
