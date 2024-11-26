@@ -4,6 +4,8 @@
 
 package frc.robot;
 
+import java.util.List;
+
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 import com.ctre.phoenix6.Utils;
@@ -12,7 +14,7 @@ import com.pathplanner.lib.auto.AutoBuilder;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.units.Units;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -22,16 +24,17 @@ import frc.robot.commands.DefaultDrive;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.util.MathUtils;
-import frc.robot.vision.Limelight;
-import frc.robot.vision.LimelightIO;
-import frc.robot.vision.LimelightIOReal;
+import frc.robot.util.VisionUtils.TimestampedVisionUpdate;
+import frc.robot.vision.Vision;
+import frc.robot.vision.VisionIO;
+import frc.robot.vision.VisionIOLimelight;
 
 public class RobotContainer {
 
     /* Setting up bindings for necessary control of the swerve drive platform */
     private final CommandPS4Controller joystick = new CommandPS4Controller(0); // My joystick
     private final CommandSwerveDrivetrain drivetrain = TunerConstants.DriveTrain; // My drivetrain
-    private final Limelight limelight;
+    private final Vision limelight;
 
     private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
     private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
@@ -67,7 +70,7 @@ public class RobotContainer {
         }));
         
         if (Utils.isSimulation()) {
-            drivetrain.seedFieldRelative(new Pose2d(MathUtils.translation.zero, MathUtils.rotation.quarter));
+            drivetrain.seedFieldRelative(new Pose2d(MathUtils.translation.kZero, MathUtils.rotation.kQuarter));
         }
         drivetrain.registerTelemetry(logger::telemeterize);
     }
@@ -81,21 +84,24 @@ public class RobotContainer {
         switch (RobotConstants.currentMode) {
             case REAL:
                 // Real robot, instantiate hardware IO implementations
-                limelight = new Limelight(new LimelightIOReal(), drivetrain);
-                limelight.useLimelight(RobotConstants.Vision.enabled);
+                limelight = new Vision(this::applyVisionUpdates, new VisionIOLimelight(RobotConstants.Vision.limelightName, 
+                    () -> drivetrain.getState().Pose.getRotation(),
+                    () -> Units.DegreesPerSecond.of(-drivetrain.getPigeon2().getRate()).in(Units.RotationsPerSecond)));
+                limelight.useVision(RobotConstants.Vision.enabled);
                 break;
 
             case SIM:
                 // Sim robot, instantiate physics sim IO implementations
-                limelight = new Limelight(new LimelightIOReal(), drivetrain);
-                limelight.useLimelight(false);
+                limelight = new Vision(this::applyVisionUpdates, new VisionIOLimelight(RobotConstants.Vision.limelightName, 
+                    () -> drivetrain.getState().Pose.getRotation(),
+                    () -> Units.DegreesPerSecond.of(-drivetrain.getPigeon2().getRate()).in(Units.RotationsPerSecond)));
+                limelight.useVision(false);
                 break;
 
             default:
                 // Replayed robot, disable IO implementations
-                limelight = new Limelight(new LimelightIO() {
-                }, drivetrain);
-                limelight.useLimelight(RobotConstants.Vision.enabled);
+                limelight = new Vision(this::applyVisionUpdates, new VisionIO() {});
+                limelight.useVision(RobotConstants.Vision.enabled);
                 break;
         }
     }
@@ -109,11 +115,11 @@ public class RobotContainer {
         if (alliance == Alliance.Red) { 
             // Start at red origin, but facing blue alliance wall
             DataLogManager.log("INITIAL POSITION: RED ALLIANCE");
-            drivetrain.seedFieldRelative(new Pose2d(MathUtils.translation.zero, MathUtils.rotation.half));
+            drivetrain.seedFieldRelative(new Pose2d(MathUtils.translation.kZero, MathUtils.rotation.kHalf));
         } else {
             // Start at blue origina
             DataLogManager.log("INITIAL POSITION: BLUE ALLIANCE");
-            drivetrain.seedFieldRelative(new Pose2d(MathUtils.translation.zero, MathUtils.rotation.zero));
+            drivetrain.seedFieldRelative(new Pose2d(MathUtils.translation.kZero, MathUtils.rotation.kZero));
         }
     }
 
@@ -122,11 +128,20 @@ public class RobotContainer {
         if (alliance == Alliance.Red) { 
             // Start at red origin, but facing blue alliance wall
             DataLogManager.log("RESETTING FORWARD: RED ALLIANCE");
-            drivetrain.seedFieldRelative(new Pose2d(currentPose.getX(), currentPose.getY(), MathUtils.rotation.half));
+            drivetrain.seedFieldRelative(new Pose2d(currentPose.getX(), currentPose.getY(), MathUtils.rotation.kHalf));
         } else {
             // Start at blue origina
             DataLogManager.log("RESETTING FORWARD: BLUE ALLIANCE");
-            drivetrain.seedFieldRelative(new Pose2d(currentPose.getX(), currentPose.getY(), MathUtils.rotation.zero));
+            drivetrain.seedFieldRelative(new Pose2d(currentPose.getX(), currentPose.getY(), MathUtils.rotation.kZero));
         }
+    }
+
+    /**
+     * Method to consume vetted TimestampedVisionUpdates and apply them to odometry
+     * 
+     * @param updates Vetted updates to apply to the drivetrain odometry
+     */
+    private void applyVisionUpdates(TimestampedVisionUpdate update) {
+        drivetrain.addVisionMeasurement(update.pose(), update.timestamp(), update.stdDevs());
     }
 }

@@ -2,7 +2,13 @@ package frc.robot;
 
 import com.ctre.phoenix6.Utils;
 
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import frc.robot.generated.TunerConstants;
+
+import static edu.wpi.first.apriltag.AprilTagFields.k2024Crescendo;
+
+import java.io.IOException;
+
 
 public final class RobotConstants {
     // Change this when we want to do replay
@@ -33,5 +39,16 @@ public final class RobotConstants {
     public final class Vision {
         public static final boolean enabled = true;
         public static final String limelightName = "limelight";
+        public static double maxRotationsPerSecond = 0.25;      // TODO: Tune this
+    }
+
+    public static AprilTagFieldLayout aprilTags;
+
+    static {
+        try {
+            aprilTags = AprilTagFieldLayout.loadFromResource(k2024Crescendo.m_resourceFile);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

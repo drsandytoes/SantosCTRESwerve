@@ -104,7 +104,7 @@ public class DefaultDrive extends Command {
                 var alliance = DriverStation.getAlliance();
                 if (alliance.isPresent()) {
                     if (alliance.get() == DriverStation.Alliance.Red) {
-                        headingToLock = headingToLock.rotateBy(MathUtils.rotation.half);
+                        headingToLock = headingToLock.rotateBy(MathUtils.rotation.kHalf);
                     }
                 }
                 savedHeading = headingToLock;
