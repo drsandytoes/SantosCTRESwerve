@@ -7,6 +7,7 @@ package frc.robot;
 import java.util.List;
 
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
+import org.photonvision.simulation.VisionSystemSim;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
@@ -35,6 +36,8 @@ public class RobotContainer {
     private final CommandPS4Controller joystick = new CommandPS4Controller(0); // My joystick
     private final CommandSwerveDrivetrain drivetrain = TunerConstants.DriveTrain; // My drivetrain
     private final Vision limelight;
+    private final VisionSystemSim visionSim;
+
 
     private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
     private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
@@ -92,10 +95,9 @@ public class RobotContainer {
 
             case SIM:
                 // Sim robot, instantiate physics sim IO implementations
-                limelight = new Vision(this::applyVisionUpdates, new VisionIOLimelight(RobotConstants.Vision.limelightName, 
-                    () -> drivetrain.getState().Pose.getRotation(),
-                    () -> Units.DegreesPerSecond.of(-drivetrain.getPigeon2().getRate()).in(Units.RotationsPerSecond)));
-                limelight.useVision(false);
+                visionSim = new VisionSystemSim("main");
+                
+
                 break;
 
             default:
@@ -143,5 +145,10 @@ public class RobotContainer {
      */
     private void applyVisionUpdates(TimestampedVisionUpdate update) {
         drivetrain.addVisionMeasurement(update.pose(), update.timestamp(), update.stdDevs());
+    }
+
+    private void setupVisionSim() {
+        VisionSystemSim visionSim = new VisionSystemSim("main");
+
     }
 }
