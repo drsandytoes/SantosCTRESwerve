@@ -48,6 +48,10 @@ public class Vision extends SubsystemBase {
         if (mt2 == null || mt2.tagCount == 0) {
             rejectUpdate = true;
         }
+        // If we're rotating quickly, we should disregard the update.
+        if (Math.abs(rotationsPerSecond) >= 2.0) {
+            rejectUpdate = true;
+        }
         if (!rejectUpdate) {
             drivetrain.setVisionMeasurementStdDevs(VecBuilder.fill(.7, .7, 9999999));
             drivetrain.addVisionMeasurement(mt2.pose, mt2.timestampSeconds);
