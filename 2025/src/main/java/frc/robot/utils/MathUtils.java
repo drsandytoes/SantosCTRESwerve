@@ -6,10 +6,10 @@ import edu.wpi.first.math.geometry.Translation2d;
 
 public final class MathUtils {
     public final class rotation {
-        static public final Rotation2d kZero = Rotation2d.fromDegrees(0);
-        static public final Rotation2d kQuarter = Rotation2d.fromDegrees(90);
-        static public final Rotation2d kHalf = Rotation2d.fromDegrees(180);
-        static public final Rotation2d kThreeQuarters = Rotation2d.fromDegrees(270);
+        static public final Rotation2d kZero = Rotation2d.kZero;
+        static public final Rotation2d kQuarter = Rotation2d.kCCW_Pi_2;
+        static public final Rotation2d kHalf = Rotation2d.kPi;
+        static public final Rotation2d kThreeQuarters = Rotation2d.kCW_Pi_2;
     }
     public final class translation {
         static public final Translation2d kZero = new Translation2d();

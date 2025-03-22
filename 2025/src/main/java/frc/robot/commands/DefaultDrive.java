@@ -3,10 +3,11 @@ package frc.robot.commands;
 import java.util.function.DoubleSupplier;
 
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
+
+import dev.doglog.DogLog;
+
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
-import edu.wpi.first.epilogue.Logged;
-import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -16,17 +17,16 @@ import frc.robot.RobotConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.utils.MathUtils;
 
-@Logged(name = "DefaultDriveCommand")
 public class DefaultDrive extends Command {
-    @NotLogged protected CommandSwerveDrivetrain drivetrain;
+    protected CommandSwerveDrivetrain drivetrain;
     protected DoubleSupplier xSupplier, ySupplier, thetaSupplier;
 
-    @NotLogged private final SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
+    private final SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
             .withDeadband(RobotConstants.Drivetrain.MaxSpeed * RobotConstants.Driver.deadband)
             .withRotationalDeadband(RobotConstants.Drivetrain.MaxAngularRate * RobotConstants.Driver.deadband)                                                                                                                // deadband
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
-    @NotLogged private final SwerveRequest.FieldCentricFacingAngle driveAtAngle = new SwerveRequest.FieldCentricFacingAngle()
+    private final SwerveRequest.FieldCentricFacingAngle driveAtAngle = new SwerveRequest.FieldCentricFacingAngle()
             .withDeadband(RobotConstants.Drivetrain.MaxSpeed * RobotConstants.Driver.deadband)
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // I want field-centric
 
@@ -85,6 +85,10 @@ public class DefaultDrive extends Command {
         double ySpeed = y * RobotConstants.Drivetrain.MaxSpeed;
         double thetaSpeed = theta * RobotConstants.Drivetrain.MaxAngularRate;
 
+        DogLog.log("DefaultDrive/xSpeed", xSpeed);
+        DogLog.log("DefaultDrive/ySpeed", ySpeed);
+        DogLog.log("DefaultDrive/thetaSpeed", thetaSpeed);
+
         if (Math.abs(deadbandedTheta) < 0.001) {
             // Driver is not rotating the robot. If they were the last time this was called,
             // latch the current heading
@@ -100,6 +104,9 @@ public class DefaultDrive extends Command {
                 currentAngleRad = MathUtil.angleModulus(currentAngleRad);
                 Rotation2d headingToLock = Rotation2d.fromRadians(currentAngleRad);
 
+                DogLog.timestamp("DefaultDrive heading lock");
+                DogLog.log("DefaultDrive/currentHeading", headingToLock);
+
                 // Pose is blue-alliance field centric standard. But if the drive train is
                 // operator-relative and we're on the red alliance, we need to rotate the 
                 // heading 180 degrees. We do this here before saving it so we don't need to do
@@ -110,12 +117,18 @@ public class DefaultDrive extends Command {
                         headingToLock = headingToLock.rotateBy(MathUtils.rotation.kHalf);
                     }
                 }
+
+                DogLog.log("DefaultDrive/savedHeading", headingToLock);
                 savedHeading = headingToLock;
             }
             driverIsRotatingRobot = false;
         } else {
             driverIsRotatingRobot = true;
         }
+
+        DogLog.log("DefaultDrive/driverIsRotatingRobot", driverIsRotatingRobot);
+        DogLog.log("DefaultDrive/savedHeading", savedHeading);
+        DogLog.log("DefaultDrive/useHeadingController", useHeadingController);
 
         if (!useHeadingController || driverIsRotatingRobot) {
             // There is rotational input (or we're not using the heading controller)

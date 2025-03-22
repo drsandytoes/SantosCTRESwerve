@@ -22,11 +22,16 @@ public final class RobotConstants {
       REPLAY
     }
 
-    public final class Logging {
-        public static final boolean enabled = true;
-        public static final boolean enableDSLogging = true;
-    }
-  
+    public static final class Logging {
+        public static final boolean enabled = true;         // Setting to disabled with make most log calls do nothing.
+    
+        public static final boolean captureDS = true;       // Include DriverStation logging such as joystick inputs?
+        public static final boolean captureNT = true;      // Include NetworkTable entries?
+        public static final boolean captureConsole = true; // Include console messages (println statements)
+        public static final boolean capturePDH = true;     // Include current information from the PDP/PDH? Capture extras must be true.
+        public static final boolean captureExtras = true;  // Capture "extras" like CAN utilization
+      }
+      
     public final class Driver {
         public static final double deadband = 0.1;
         public static final boolean useHeadingController = true;
