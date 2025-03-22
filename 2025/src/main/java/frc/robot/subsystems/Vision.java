@@ -39,7 +39,7 @@ public class Vision extends SubsystemBase {
         DogLog.log("Vision/drivetrainPose", robotPose);
 
         // If we don't see any tags, the pose can't be good
-        if (mt2.tagCount == 0) {
+        if (mt2 == null || mt2.tagCount == 0) {
             rejectUpdate = true;
         }
         if (!rejectUpdate) {
