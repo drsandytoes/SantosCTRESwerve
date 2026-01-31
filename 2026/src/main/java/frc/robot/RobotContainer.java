@@ -9,7 +9,11 @@ import static edu.wpi.first.units.Units.*;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
+import dev.doglog.DogLog;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
@@ -18,6 +22,8 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.VisionConfigurationControl;
+import frc.robot.subsystems.VisionUpdate;
 
 public class RobotContainer {
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
@@ -35,8 +41,28 @@ public class RobotContainer {
     private final CommandPS4Controller joystick = new CommandPS4Controller(0);
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
+    public final VisionUpdate visionUpdater;
+    public final VisionConfigurationControl visionControl;
+
+    // Tunables
+    private final BooleanSubscriber useLimelightIMU = DogLog.tunable("Vision/useLimelightIMU", false);
+
+    private boolean hasSetInitialPose = false;
 
     public RobotContainer() {
+        // In the absence of an auto to set our initial position, at least point us "forward"
+        // with repsect to our alliance
+
+        // This doesn't work. The mt2pose and robot have different angles
+        // drivetrain.resetPose(new Pose2d(Translation2d.kZero, Rotation2d.k180deg));
+
+        // Force the pigeon to agree with the pose. This seems to work.
+        // Pose2d startingPose = new Pose2d(Translation2d.kZero, Rotation2d.kCCW_90deg);
+        // drivetrain.getPigeon2().setYaw(startingPose.getRotation().getDegrees());
+        // drivetrain.resetPose(startingPose);
+
+        visionUpdater = new VisionUpdate(drivetrain, Constants.Vision.limelightName);
+        visionControl = new VisionConfigurationControl(visionUpdater, drivetrain);
         configureBindings();
     }
 
@@ -94,5 +120,14 @@ public class RobotContainer {
             // Finally idle for the rest of auton
             drivetrain.applyRequest(() -> idle)
         );
+    }
+
+    // Callbacks from Robot.java for disabled mode entry/exit
+    public void disabledInit() {
+        visionControl.robotEnabled(false);
+    }
+
+    public void disabledExit() {
+        visionControl.robotEnabled(true);
     }
 }
