@@ -13,5 +13,10 @@ public final class Constants {
     public static final class VisionStateMachine {
         public static final int detectDelay = 5;
     }
+
+    public static final class LED {
+        public static final int port = 0;
+        public static final int stringLength = 16 * 16 * 3;
+    }
     
 }

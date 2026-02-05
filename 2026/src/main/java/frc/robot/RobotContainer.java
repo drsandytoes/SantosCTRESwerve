@@ -14,6 +14,8 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.networktables.BooleanSubscriber;
+import edu.wpi.first.wpilibj.AddressableLED;
+import edu.wpi.first.wpilibj.AddressableLEDBuffer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
@@ -24,6 +26,7 @@ import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.VisionConfigurationControl;
 import frc.robot.subsystems.VisionUpdate;
+import frc.robot.subsystems.LED.SimpleLEDSubsystem;
 
 public class RobotContainer {
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
@@ -40,29 +43,20 @@ public class RobotContainer {
 
     private final CommandPS4Controller joystick = new CommandPS4Controller(0);
 
+    // Subsystems
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
     public final VisionUpdate visionUpdater;
     public final VisionConfigurationControl visionControl;
-
-    // Tunables
-    private final BooleanSubscriber useLimelightIMU = DogLog.tunable("Vision/useLimelightIMU", false);
-
-    private boolean hasSetInitialPose = false;
+    public final SimpleLEDSubsystem ledSubsystem;
 
     public RobotContainer() {
-        // In the absence of an auto to set our initial position, at least point us "forward"
-        // with repsect to our alliance
-
-        // This doesn't work. The mt2pose and robot have different angles
-        // drivetrain.resetPose(new Pose2d(Translation2d.kZero, Rotation2d.k180deg));
-
-        // Force the pigeon to agree with the pose. This seems to work.
-        // Pose2d startingPose = new Pose2d(Translation2d.kZero, Rotation2d.kCCW_90deg);
-        // drivetrain.getPigeon2().setYaw(startingPose.getRotation().getDegrees());
-        // drivetrain.resetPose(startingPose);
-
+        ledSubsystem = new SimpleLEDSubsystem();
         visionUpdater = new VisionUpdate(drivetrain, Constants.Vision.limelightName);
-        visionControl = new VisionConfigurationControl(visionUpdater, drivetrain);
+
+        // Purposefully only control part of the string for demo purposes. This would be useful if
+        // we used different segments of lights for different purposes.
+        var ledSubString = ledSubsystem.getBuffer(16, 31);
+        visionControl = new VisionConfigurationControl(visionUpdater, drivetrain, ledSubString);
         configureBindings();
     }
 
@@ -78,6 +72,9 @@ public class RobotContainer {
             )
         );
 
+        // Reset the vision controller. Forcably if share button is also pressed
+        joystick.options().onTrue(Commands.run(() -> visionControl.reset(joystick.share().getAsBoolean())));
+
         // Idle while the robot is disabled. This ensures the configured
         // neutral mode is applied to the drive motors while disabled.
         final var idle = new SwerveRequest.Idle();
@@ -92,10 +89,10 @@ public class RobotContainer {
 
         // Run SysId routines when holding back/start and X/Y.
         // Note that each routine should be run exactly once in a single log.
-        joystick.options().and(joystick.square()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
-        joystick.options().and(joystick.square()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
-        joystick.PS().and(joystick.triangle()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
-        joystick.PS().and(joystick.triangle()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
+        // joystick.options().and(joystick.square()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
+        // joystick.options().and(joystick.square()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
+        // joystick.PS().and(joystick.triangle()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
+        // joystick.PS().and(joystick.triangle()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
         // Reset the field-centric heading on left bumper press.
         joystick.L1().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));

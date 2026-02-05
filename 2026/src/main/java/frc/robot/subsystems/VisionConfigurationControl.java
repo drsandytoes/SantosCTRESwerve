@@ -1,10 +1,18 @@
 package frc.robot.subsystems;
 
+import static edu.wpi.first.units.Units.Seconds;
+
+import java.util.ArrayList;
+
 import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.wpilibj.LEDPattern;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import frc.robot.subsystems.LED.SimpleLEDPatternApplier;
+import frc.robot.subsystems.LED.SimpleLEDSubsystem;
 import frc.robot.subsystems.VisionUpdate.VisionAlgorithm;
 import frc.robot.subsystems.VisionUpdate.VisionIMUMode;
 
@@ -75,25 +83,53 @@ import frc.robot.subsystems.VisionUpdate.VisionIMUMode;
 
 public class VisionConfigurationControl extends SubsystemBase {
     enum ConfigurationState {
-        UNSET,
+        BOOT,
         DETECT,
         COMMIT,
-        ENABLED
+        ENABLED,
     }
 
-    private ConfigurationState currentState = ConfigurationState.UNSET;
+    private ConfigurationState currentState = ConfigurationState.BOOT;
+    
     private VisionUpdate visionUpdateSubsystem;
     private CommandSwerveDrivetrain drivetrain;
+    private SimpleLEDPatternApplier ledSubsystem;
+
     private Pose2d startingPose = Pose2d.kZero;
     private Pose2d detectedPose = Pose2d.kZero;
     private Timer detectTimer = new Timer();
     private boolean localizationCompleted = false;
 
-    public VisionConfigurationControl(VisionUpdate visionUpdateSubsystem, CommandSwerveDrivetrain drivetrain) {
+    // Display patterns
+    ArrayList<LEDPattern> displayPatterns;
+
+    public VisionConfigurationControl(VisionUpdate visionUpdateSubsystem, CommandSwerveDrivetrain drivetrain, SimpleLEDPatternApplier ledSubsystem) {
         this.visionUpdateSubsystem = visionUpdateSubsystem;
         this.drivetrain = drivetrain;
+        this.ledSubsystem = ledSubsystem;
 
-        // Note: We don't require either subsystem; they're free to run other commands
+        displayPatterns = new ArrayList<LEDPattern>();
+        for (ConfigurationState state : ConfigurationState.values()) {
+            LEDPattern pattern = null;
+            switch (state) {
+                case BOOT:
+                    pattern = LEDPattern.solid(Color.kBlack);
+                    break;
+                case DETECT:
+                    pattern = LEDPattern.solid(Color.kRed).blink(Seconds.of(0.25));
+                    break;
+                case COMMIT:
+                    pattern = LEDPattern.solid(Color.kGreen);
+                    break;
+                case ENABLED:
+                    pattern = LEDPattern.solid(Color.kWhite);
+                    break;
+            }
+            displayPatterns.set(state.ordinal(), pattern);
+
+        }
+
+        moveToState(ConfigurationState.BOOT);
     }
 
     @Override
@@ -106,7 +142,7 @@ public class VisionConfigurationControl extends SubsystemBase {
 
         // Handles things we do every time we're in this state
         switch (currentState) {
-            case UNSET:
+            case BOOT:
                 moveToState(ConfigurationState.DETECT);
                 break;
 
@@ -162,15 +198,17 @@ public class VisionConfigurationControl extends SubsystemBase {
     public void setNewStartingPose(Pose2d pose) {
         startingPose = pose;
 
-        reset();
+        reset(false);
     }
 
     /**
-     * Can be called to reset the state machine. This should be called if the robot is moved after the program boots.
+     * Can be called to reset the state machine. If the robot has already been enabled, this will be ignored
+     * unless the force flag is set.
+     * @param force Force the state machine to reset even if the robot has already been enabled
      */
-    public void reset() {
-        if (currentState != ConfigurationState.ENABLED) {
-            moveToState(ConfigurationState.DETECT);
+    public void reset(boolean force) {
+        if (currentState != ConfigurationState.ENABLED && !force) {
+            moveToState(ConfigurationState.BOOT);
         }
     }
 
@@ -185,7 +223,7 @@ public class VisionConfigurationControl extends SubsystemBase {
     private void moveToState(ConfigurationState newState) {
         // Handle entry into the new state
         switch (newState) {
-            case UNSET:
+            case BOOT:
                 break;
 
             case DETECT:
@@ -227,6 +265,7 @@ public class VisionConfigurationControl extends SubsystemBase {
         }
 
         currentState = newState;
+        ledSubsystem.runPattern(displayPatterns.get(newState.ordinal()));
     }
 
     private void resetPigeonAndPose(Pose2d pose) {
