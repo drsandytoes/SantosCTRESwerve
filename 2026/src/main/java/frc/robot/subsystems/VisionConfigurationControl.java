@@ -100,34 +100,16 @@ public class VisionConfigurationControl extends SubsystemBase {
     private Timer detectTimer = new Timer();
     private boolean localizationCompleted = false;
 
-    // Display patterns
-    ArrayList<LEDPattern> displayPatterns;
+    // Visualization patterns
+    private final LEDPattern offPattern = LEDPattern.solid(Color.kBlack);
+    private final LEDPattern detectPattern = LEDPattern.solid(Color.kRed).blink(Seconds.of(0.25));
+    private final LEDPattern commitPattern = LEDPattern.solid(Color.kGreen);
+    private final LEDPattern enabledPattern = LEDPattern.solid(Color.kWhite);
 
     public VisionConfigurationControl(VisionUpdate visionUpdateSubsystem, CommandSwerveDrivetrain drivetrain, SimpleLEDPatternApplier ledSubsystem) {
         this.visionUpdateSubsystem = visionUpdateSubsystem;
         this.drivetrain = drivetrain;
         this.ledSubsystem = ledSubsystem;
-
-        displayPatterns = new ArrayList<LEDPattern>();
-        for (ConfigurationState state : ConfigurationState.values()) {
-            LEDPattern pattern = null;
-            switch (state) {
-                case BOOT:
-                    pattern = LEDPattern.solid(Color.kBlack);
-                    break;
-                case DETECT:
-                    pattern = LEDPattern.solid(Color.kRed).blink(Seconds.of(0.25));
-                    break;
-                case COMMIT:
-                    pattern = LEDPattern.solid(Color.kGreen);
-                    break;
-                case ENABLED:
-                    pattern = LEDPattern.solid(Color.kWhite);
-                    break;
-            }
-            displayPatterns.set(state.ordinal(), pattern);
-
-        }
 
         moveToState(ConfigurationState.BOOT);
     }
@@ -264,8 +246,34 @@ public class VisionConfigurationControl extends SubsystemBase {
 
         }
 
+        boolean stateChanged = currentState != newState;
         currentState = newState;
-        ledSubsystem.runPattern(displayPatterns.get(newState.ordinal()));
+
+        updateVisualization();
+    }
+
+    private void updateVisualization() {
+        LEDPattern pattern = null;
+        switch (currentState) {
+            case BOOT:
+                pattern = offPattern;
+                break;
+            case DETECT:
+                pattern = detectPattern;
+                break;
+            case COMMIT:
+                pattern = commitPattern;
+                break;
+            case ENABLED:
+                pattern = enabledPattern;
+                break;
+        }
+
+        if (pattern != null) {
+            ledSubsystem.applyPattern(pattern);
+        } else {
+            System.out.println("NULL pattern to apply!!");
+        }
     }
 
     private void resetPigeonAndPose(Pose2d pose) {

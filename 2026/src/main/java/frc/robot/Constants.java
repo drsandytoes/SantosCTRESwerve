@@ -11,7 +11,7 @@ public final class Constants {
     }
 
     public static final class VisionStateMachine {
-        public static final int detectDelay = 5;
+        public static final int detectDelay = 10;
     }
 
     public static final class LED {

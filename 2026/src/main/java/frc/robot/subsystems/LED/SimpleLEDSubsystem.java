@@ -5,12 +5,14 @@ import edu.wpi.first.wpilibj.AddressableLEDBuffer;
 import edu.wpi.first.wpilibj.LEDPattern;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 public class SimpleLEDSubsystem extends SubsystemBase implements SimpleLEDPatternApplier {
     private final AddressableLED m_led;
     private final AddressableLEDBuffer m_buffer;
+    private LEDPattern defaultPattern = LEDPattern.solid(Color.kBlack);
 
     public SimpleLEDSubsystem() {
         m_led = new AddressableLED(Constants.LED.port);
@@ -18,11 +20,8 @@ public class SimpleLEDSubsystem extends SubsystemBase implements SimpleLEDPatter
         m_led.setLength(Constants.LED.stringLength);
         m_led.start();
 
-        // Set the default command to turn the strip off, otherwise the last colors
-        // written by
-        // the last command to run will continue to be displayed.
-        // Note: Other default patterns could be used instead!
-        setDefaultCommand(runPattern(LEDPattern.solid(Color.kBlack)).withName("Off"));
+        // If we don't use sub-buffers, we should apply a default command here that applies
+        // the defaultPattern. But if we do that when using sub-buffers, they'll conflict.
     }
 
     @Override
@@ -44,12 +43,12 @@ public class SimpleLEDSubsystem extends SubsystemBase implements SimpleLEDPatter
     }
 
     /**
-     * Applies a pattern to the LED strip.
+     * Sets the default pattern for the LED strip.
      * 
      * @param pattern the LED pattern to run
      */
     public void applyPattern(LEDPattern pattern) {
-        pattern.applyTo(m_buffer);
+        defaultPattern = pattern;
     }
 
     public SimpleLEDBuffer getBuffer(int start, int end) {

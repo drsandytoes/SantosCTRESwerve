@@ -76,7 +76,7 @@
  },
  "generationFeatures":[],
  "codegen":{
-  "root":"Users/sana/folders/vsc/janksters/2026Rebuilt/2026Rebuilt/src/main/deploy",
+  "root":"../../java/frc/robot/generated",
   "genVars":true,
   "genTrajData":true,
   "useChoreoLib":true
