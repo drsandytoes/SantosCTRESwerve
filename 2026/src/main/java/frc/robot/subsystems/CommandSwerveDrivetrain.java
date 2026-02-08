@@ -10,6 +10,8 @@ import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
+import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
+import com.ctre.phoenix6.swerve.SwerveRequest.ForwardPerspectiveValue;
 
 import choreo.trajectory.SwerveSample;
 import edu.wpi.first.math.Matrix;
@@ -53,10 +55,17 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization = new SwerveRequest.SysIdSwerveRotation();
 
     // Trajectory following
-    private SwerveRequest.FieldCentric fieldCentricRequest = new SwerveRequest.FieldCentric();
+    private SwerveRequest.FieldCentric fieldCentricRequest = new SwerveRequest.FieldCentric()
+        .withForwardPerspective(ForwardPerspectiveValue.BlueAlliance)
+        .withDriveRequestType(DriveRequestType.Velocity);
     private final PIDController xController = new PIDController(10.0, 0.0, 0.0);
     private final PIDController yController = new PIDController(10.0, 0.0, 0.0);
     private final PIDController headingController = new PIDController(7.5, 0.0, 0.0);
+
+    // Static initialization code
+    {
+        headingController.enableContinuousInput(-Math.PI, Math.PI);
+    }
 
     /* SysId routine for characterizing translation. This is used to find PID gains for the drive motors. */
     private final SysIdRoutine m_sysIdRoutineTranslation = new SysIdRoutine(

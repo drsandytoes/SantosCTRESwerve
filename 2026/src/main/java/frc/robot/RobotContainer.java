@@ -6,13 +6,18 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.*;
 
+import java.util.Optional;
+
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
+import choreo.Choreo;
 import choreo.auto.AutoChooser;
 import choreo.auto.AutoFactory;
 import choreo.auto.AutoRoutine;
 import choreo.auto.AutoTrajectory;
+import choreo.trajectory.SwerveSample;
+import choreo.trajectory.Trajectory;
 import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -20,6 +25,9 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.wpilibj.AddressableLED;
 import edu.wpi.first.wpilibj.AddressableLEDBuffer;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -56,7 +64,7 @@ public class RobotContainer {
     public final VisionConfigurationControl visionControl;
     public final SimpleLEDSubsystem ledSubsystem;
 
-    private final AutoChooser autoChooser;
+    private final NotifyingAutoChooser autoChooser;
     private final AutoFactory autoFactory;
 
     public RobotContainer() {
@@ -81,14 +89,16 @@ public class RobotContainer {
 
 
         // Create the auto chooser
-        autoChooser = new AutoChooser();
+        autoChooser = new NotifyingAutoChooser();
 
         // Add options to the chooser
         autoChooser.addRoutine("Example HTW Routine", this::htw);
         autoChooser.addRoutine("Example OTCTW Routine", this::otctw);
 
+        autoChooser.onChange(this::selectedAutoChanged);
+
         // Put the auto chooser on the dashboard
-        SmartDashboard.putData(autoChooser);
+        SmartDashboard.putData("Auto Choices", autoChooser);
 
         // Schedule the selected auto during the autonomous period
         RobotModeTriggers.autonomous().whileTrue(autoChooser.selectedCommandScheduler());
@@ -159,6 +169,11 @@ public class RobotContainer {
         visionControl.robotEnabled(true);
     }
 
+    public void driverStationConnected() {
+        // Re-evalute the starting pose because it might now be flipped
+        selectedAutoChanged(autoChooser.lastKnownSelection());
+    }
+
     // Choreo routines
     private AutoRoutine htw() {
         AutoRoutine routine = autoFactory.newRoutine("HTW");
@@ -194,6 +209,36 @@ public class RobotContainer {
                 ));
 
         return routine;
+    }
+
+    // Callback that happens whenever auto changes
+    private void selectedAutoChanged(String newAutoName) {
+        System.out.println("New auto selected: " + newAutoName);
+
+        // Tell the VisionControl system to start over with the new pose
+        Optional<Trajectory<SwerveSample>> trajectory = Optional.empty();
+        switch (newAutoName) {
+            case "Example OTCTW Routine": // Should use shared string constants to avoid mismatches here!
+                trajectory = Choreo.loadTrajectory("OT_C_TW");
+                break;
+            case "Example HTW Routine":
+                trajectory = Choreo.loadTrajectory("H_TW");
+                break;
+            default:
+                System.out.println("WARNING: unknown auto name!");
+                break;
+        }
+        if (trajectory.isPresent()) {
+            var alliance = DriverStation.getAlliance();
+            boolean isRedAlliance = alliance.isPresent() && alliance.get() == Alliance.Red;
+
+            Optional<SwerveSample> startingSample = trajectory.get().getInitialSample(isRedAlliance);
+            if (startingSample.isPresent()) {
+                Pose2d newStartingPose = startingSample.get().getPose();
+                visionControl.setNewStartingPose(newStartingPose);
+                DogLog.log("RobotContainer/StartingPose", newStartingPose);
+            }
+        }
     }
 
 }

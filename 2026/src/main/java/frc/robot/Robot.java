@@ -4,9 +4,13 @@
 
 package frc.robot;
 
+import java.util.Optional;
+
 import com.ctre.phoenix6.HootAutoReplay;
 
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
@@ -14,6 +18,7 @@ public class Robot extends TimedRobot {
     private Command m_autonomousCommand;
 
     private final RobotContainer m_robotContainer;
+    private Alliance currentAllianceColor = Alliance.Blue;
 
     /* log and replay timestamp and joystick data */
     private final HootAutoReplay m_timeAndJoystickReplay = new HootAutoReplay()
@@ -36,7 +41,20 @@ public class Robot extends TimedRobot {
     }
 
     @Override
-    public void disabledPeriodic() {}
+    public void disabledPeriodic() {
+        // Watch for alliance color changes while disabled. Probalby don't need this for real robot code, but
+        // it's useful for testing.
+        Optional<Alliance> alliance = DriverStation.getAlliance();
+        if (alliance.isPresent()) {
+            Alliance newAlliance = alliance.get();
+            if (newAlliance != currentAllianceColor) {
+                currentAllianceColor = newAlliance;
+
+                // Simulate a DS connection event so we re-evaluate our state.
+                m_robotContainer.driverStationConnected();
+            }
+        }
+    }
 
     @Override
     public void disabledExit() {
@@ -85,4 +103,12 @@ public class Robot extends TimedRobot {
 
     @Override
     public void simulationPeriodic() {}
+
+    @Override
+    public void driverStationConnected() {
+        // We need to re-evalute our starting pose. Forward it on to RobotContainer.
+        // Unfortunately, this is only called once, so if you disconnect, change the alliance color
+        // and reconnect, we won't be called again.
+        m_robotContainer.driverStationConnected();
+    }
 }
