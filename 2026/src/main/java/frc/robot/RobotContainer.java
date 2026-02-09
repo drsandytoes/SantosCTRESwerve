@@ -38,6 +38,7 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.VisionConfigurationControl;
+import frc.robot.subsystems.VisionSimulation;
 import frc.robot.subsystems.VisionUpdate;
 import frc.robot.subsystems.LED.SimpleLEDSubsystem;
 
@@ -64,12 +65,22 @@ public class RobotContainer {
     public final VisionConfigurationControl visionControl;
     public final SimpleLEDSubsystem ledSubsystem;
 
+    public VisionSimulation visionSim;
+
     private final NotifyingAutoChooser autoChooser;
     private final AutoFactory autoFactory;
 
     public RobotContainer() {
+        visionSim = new VisionSimulation();
+        visionSim.setTargetTag(12);
+        visionSim.setSimulatedRelativeLocation(new Translation2d(1.0, 0)); // 1m forward; 0m side offset
+        visionSim.setSimulatedRotation(Rotation2d.k180deg); // Facing blue alliance wall
+
+        // Force some logging to happen so we see it on the dashboard
+        visionSim.simulatedPose();
+
         ledSubsystem = new SimpleLEDSubsystem();
-        visionUpdater = new VisionUpdate(drivetrain, Constants.Vision.limelightName);
+        visionUpdater = new VisionUpdate(drivetrain, Constants.Vision.limelightName, visionSim);
 
         // Purposefully only control part of the string for demo purposes. This would be
         // useful if

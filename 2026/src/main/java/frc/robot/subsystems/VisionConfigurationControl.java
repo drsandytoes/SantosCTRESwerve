@@ -4,8 +4,11 @@ import static edu.wpi.first.units.Units.Seconds;
 
 import java.util.ArrayList;
 
+import com.ctre.phoenix6.hardware.Pigeon2;
+
 import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.LEDPattern;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.util.Color;
@@ -15,6 +18,7 @@ import frc.robot.subsystems.LED.SimpleLEDPatternApplier;
 import frc.robot.subsystems.LED.SimpleLEDSubsystem;
 import frc.robot.subsystems.VisionUpdate.VisionAlgorithm;
 import frc.robot.subsystems.VisionUpdate.VisionIMUMode;
+import frc.robot.subsystems.VisionUpdate.VisionTrustLevel;
 
 /**
  * This class manages the configuration of the VisionUpdate class as the system
@@ -86,6 +90,7 @@ public class VisionConfigurationControl extends SubsystemBase {
         BOOT,
         DETECT,
         COMMIT,
+        DONE,
         ENABLED,
     }
 
@@ -97,13 +102,14 @@ public class VisionConfigurationControl extends SubsystemBase {
 
     private Pose2d startingPose = Pose2d.kZero;
     private Pose2d detectedPose = Pose2d.kZero;
-    private Timer detectTimer = new Timer();
+    private Timer delayTimer = new Timer();
     private boolean localizationCompleted = false;
 
     // Visualization patterns
     private final LEDPattern offPattern = LEDPattern.solid(Color.kBlack);
     private final LEDPattern detectPattern = LEDPattern.solid(Color.kRed).blink(Seconds.of(0.25));
-    private final LEDPattern commitPattern = LEDPattern.solid(Color.kGreen);
+    private final LEDPattern commitPattern = LEDPattern.solid(Color.kBlue);
+    private final LEDPattern donePattern = LEDPattern.solid(Color.kGreen);
     private final LEDPattern enabledPattern = LEDPattern.solid(Color.kWhite);
 
     public VisionConfigurationControl(VisionUpdate visionUpdateSubsystem, CommandSwerveDrivetrain drivetrain, SimpleLEDPatternApplier ledSubsystem) {
@@ -131,16 +137,22 @@ public class VisionConfigurationControl extends SubsystemBase {
             case DETECT:
                 // Move on to COMMIT state if enough time has passed. Might want to add a
                 // convergence criteria as well.
-                if (detectTimer.hasElapsed(Constants.VisionStateMachine.detectDelay)) {
-                    detectTimer.stop();
+                if (delayTimer.hasElapsed(Constants.VisionStateMachine.detectDelay)) {
+                    delayTimer.stop();
                     moveToState(ConfigurationState.COMMIT);
                 }
                 break;
 
             case COMMIT:
-                // Nothing to do on each loop; just let vision do it's thing
+                // Move on to DONE state after a short delay to prevent using the Pigeon before
+                // the yaw has truly reset.
+                if (delayTimer.hasElapsed(Constants.VisionStateMachine.postCommitDelay)) {
+                    delayTimer.stop();
+                    moveToState(ConfigurationState.DONE);
+                }
                 break;
 
+            case DONE:
             case ENABLED:
                 break;
         }
@@ -213,10 +225,11 @@ public class VisionConfigurationControl extends SubsystemBase {
                 visionUpdateSubsystem.setThrottled(true);
                 visionUpdateSubsystem.setVisionAlgorithm(VisionAlgorithm.MT1);
                 visionUpdateSubsystem.setIMUMode(VisionIMUMode.SeedInternal);
+                visionUpdateSubsystem.setTrustLevel(VisionTrustLevel.MT1_PRE_MATCH);
                 detectedPose = Pose2d.kZero;
                 drivetrain.resetPose(startingPose);
-                detectTimer.reset();
-                detectTimer.start();
+                delayTimer.reset();
+                delayTimer.start();
                 break;
 
             case COMMIT:
@@ -224,15 +237,24 @@ public class VisionConfigurationControl extends SubsystemBase {
                 detectedPose = drivetrain.getState().Pose;
                 resetPigeonAndPose(detectedPose);
 
-                // Switch over to use MT2
-                visionUpdateSubsystem.setVisionAlgorithm(VisionAlgorithm.MT2);
+                // Disable vision updates for a brief period
+                visionUpdateSubsystem.setVisionAlgorithm(VisionAlgorithm.DISABLED);
+                delayTimer.reset();
+                delayTimer.start();
 
                 localizationCompleted = true;
+                break;
+
+            case DONE:
+                // Resume vision updates with MT2 after a brief settling period
+                visionUpdateSubsystem.setVisionAlgorithm(VisionAlgorithm.MT2);
+                visionUpdateSubsystem.setTrustLevel(VisionTrustLevel.MT2_PRE_MATCH);
                 break;
 
             case ENABLED:
                 // Transition to enabled
                 visionUpdateSubsystem.setThrottled(false);
+                visionUpdateSubsystem.setTrustLevel(VisionTrustLevel.MT2_MATCH);
 
                 if (isFinished()) {
                     // We finished, so we can safely use the fused IMU mode
@@ -246,9 +268,7 @@ public class VisionConfigurationControl extends SubsystemBase {
 
         }
 
-        boolean stateChanged = currentState != newState;
         currentState = newState;
-
         updateVisualization();
     }
 
@@ -264,6 +284,9 @@ public class VisionConfigurationControl extends SubsystemBase {
             case COMMIT:
                 pattern = commitPattern;
                 break;
+            case DONE:
+                pattern = donePattern;
+                break;
             case ENABLED:
                 pattern = enabledPattern;
                 break;
@@ -277,8 +300,20 @@ public class VisionConfigurationControl extends SubsystemBase {
     }
 
     private void resetPigeonAndPose(Pose2d pose) {
-        drivetrain.getPigeon2().setYaw(pose.getRotation().getDegrees());
+        Pigeon2 pigeon = drivetrain.getPigeon2();
+        pigeon.setYaw(pose.getRotation().getDegrees());
+        pigeon.getYaw().refresh();
+
+        double degrees = pigeon.getYaw().getValueAsDouble();
+        Rotation2d rotation = pigeon.getRotation2d();
+        DogLog.log("VisionControl/PigeonResetYaw", degrees);
+        DogLog.log("VisionControl/PigeonResetRotation", rotation.getDegrees());
+        DogLog.log("VisionControl/PigeonResetTarget", pose.getRotation().getDegrees());
+
+
         drivetrain.resetPose(pose);
+
+        DogLog.log("VisionControl/ResetPose", pose);
     }
 
 }

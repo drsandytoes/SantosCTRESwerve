@@ -1,5 +1,7 @@
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Pose2d;
+
 public final class Constants {
     public static final class Vision {
         public static final String limelightName = "limelight";
@@ -11,7 +13,8 @@ public final class Constants {
     }
 
     public static final class VisionStateMachine {
-        public static final int detectDelay = 5;
+        public static final double detectDelay = 4;
+        public static final double postCommitDelay = 0.5;
     }
 
     public static final class LED {
