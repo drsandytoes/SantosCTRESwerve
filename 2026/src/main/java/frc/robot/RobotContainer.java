@@ -19,10 +19,15 @@ import choreo.auto.AutoTrajectory;
 import choreo.trajectory.SwerveSample;
 import choreo.trajectory.Trajectory;
 import dev.doglog.DogLog;
+import dev.doglog.internal.tunable.Tunable;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.networktables.BooleanSubscriber;
+import edu.wpi.first.networktables.DoubleArrayEntry;
+import edu.wpi.first.networktables.DoubleArraySubscriber;
+import edu.wpi.first.networktables.DoubleSubscriber;
+import edu.wpi.first.networktables.IntegerSubscriber;
 import edu.wpi.first.wpilibj.AddressableLED;
 import edu.wpi.first.wpilibj.AddressableLEDBuffer;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -60,24 +65,33 @@ public class RobotContainer {
     private final CommandPS4Controller joystick = new CommandPS4Controller(0);
 
     // Subsystems
-    public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
-    public final VisionUpdate visionUpdater;
-    public final VisionConfigurationControl visionControl;
-    public final SimpleLEDSubsystem ledSubsystem;
+    private final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
+    private final VisionUpdate visionUpdater;
+    private final VisionConfigurationControl visionControl;
+    private final SimpleLEDSubsystem ledSubsystem;
 
-    public VisionSimulation visionSim;
+    // Vision simulation
+    private VisionSimulation visionSim;
+    private DoubleSubscriber visionSimDistance = DogLog.tunable("VisionSim/dist", 1.0, (double val) -> {
+        visionSim.setSimulatedDistance(val);
+    });
+    private DoubleSubscriber visionSimRotation = DogLog.tunable("VisionSim/rotationDeg", 180.0, (double val) -> {
+        visionSim.setSimulatedRotation(Rotation2d.fromDegrees(val));
+    });
+    private IntegerSubscriber visionSimTagID = DogLog.tunable("VisionSim/tag", 12, (long val) -> {
+        visionSim.setTargetTag((int)val);
+    });
 
     private final NotifyingAutoChooser autoChooser;
     private final AutoFactory autoFactory;
 
     public RobotContainer() {
         visionSim = new VisionSimulation();
-        visionSim.setTargetTag(12);
-        visionSim.setSimulatedRelativeLocation(new Translation2d(1.0, 0)); // 1m forward; 0m side offset
-        visionSim.setSimulatedRotation(Rotation2d.k180deg); // Facing blue alliance wall
 
-        // Force some logging to happen so we see it on the dashboard
-        visionSim.simulatedPose();
+        // Get initial sim target from the tunables
+        visionSim.setTargetTag((int)visionSimTagID.get());
+        visionSim.setSimulatedDistance(visionSimDistance.get()); 
+        visionSim.setSimulatedRotation(Rotation2d.fromDegrees(visionSimRotation.get())); 
 
         ledSubsystem = new SimpleLEDSubsystem();
         visionUpdater = new VisionUpdate(drivetrain, Constants.Vision.limelightName, visionSim);

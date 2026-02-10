@@ -20,7 +20,7 @@ public class VisionSimulation {
     private Pose2d targetPose = Pose2d.kZero;
 
     // Info about where we *really* are
-    private Translation2d offset = Translation2d.kZero; // Relative to tag
+    private double simulatedDistance = 0.0;
     private Rotation2d simulatedRotation = Rotation2d.kZero; // Relative to field
 
     public VisionSimulation() {
@@ -35,6 +35,7 @@ public class VisionSimulation {
         targetPose = targetTagPose();
 
         DogLog.log("VisionSim/TargetTag", targetPose);
+        logSimulatedPose();
     }
 
     private Pose2d targetTagPose() {
@@ -49,31 +50,24 @@ public class VisionSimulation {
         return pose;
     }
 
-    private Translation2d targetTranslation() {
-        return targetPose.getTranslation();
-    }
-
-    public void setSimulatedRelativeLocation(Translation2d translationOffset) {
-        offset = translationOffset;
+    public void setSimulatedDistance(double distance) {
+        simulatedDistance = distance;
+        logSimulatedPose();
     }
 
     public void setSimulatedRotation(Rotation2d rotation) {
         simulatedRotation = rotation;
+        logSimulatedPose();
     }
 
-    public Pose2d simulatedPose() {
-        Pose2d pose = new Pose2d(targetPose.getTranslation().plus(offset), simulatedRotation);
+    public void logSimulatedPose() {
+        Pose2d pose = robotPoseForTag(targetPose, simulatedRotation, simulatedDistance);
         DogLog.log("VisionSim/ActualPose", pose);
-
-        return pose;
     }
 
     public PoseEstimate getMT1Estimate(Rotation2d gyroRotation) {
         // MT1 ignores the gyro, but has more error than MT2.
-        Translation2d tagTranslation = targetTranslation();
-        Translation2d robotPosition = tagTranslation.plus(offset);
-
-        Pose2d pose = new Pose2d(robotPosition.getX(), robotPosition.getY(), simulatedRotation);
+        Pose2d pose = robotPoseForTag(targetPose, simulatedRotation, simulatedDistance);
 
         // Apply some error
         pose = applyRandomError(pose, 0.25, 0.15);
@@ -88,15 +82,29 @@ public class VisionSimulation {
         return estimate;
     }
 
+    /**
+     * Given a tag pose, a distance from that tag, and a heading of a robot, determine the pose
+     * of the robot. Like MegaTag2, this doesn't consider whether it would be possible to see
+     * the tag from the returned position.
+     * @param tagPose Pose of the tag being seen. Only the translation component is considered.
+     * @param robotRotation The robot's heading in field coordinates
+     * @param distanceFromTag The robot's distance from the tag
+     * @return pose of the robot meeting those conditions
+     */
+    private Pose2d robotPoseForTag(Pose2d tagPose, Rotation2d robotRotation, double distanceFromTag) {
+        double angleRad = robotRotation.getRadians();
+        Translation2d tagTranslation = tagPose.getTranslation();
+        Pose2d pose = new Pose2d(tagTranslation.getX() - distanceFromTag * Math.cos(angleRad), 
+            tagTranslation.getY() - distanceFromTag * Math.sin(angleRad), 
+            robotRotation);
+
+        return pose;
+    }
+
     public PoseEstimate getMT2Estimate(Rotation2d gyroRotation) {
         // Compute a location relative to the tag that maintains the same distance, but obeys
         // the passed in gyroRotation.
-        double distance = Math.hypot(offset.getX(), offset.getY());
-        double angleRad = gyroRotation.getRadians();
-        Translation2d tagTranslation = targetTranslation();
-        Pose2d pose = new Pose2d(tagTranslation.getX() - distance * Math.cos(angleRad), 
-            tagTranslation.getY() - distance * Math.sin(angleRad), 
-            gyroRotation);
+        Pose2d pose = robotPoseForTag(targetPose, gyroRotation, simulatedDistance);
 
         // Apply some error
         pose = applyRandomError(pose, 0.15, 0.0);

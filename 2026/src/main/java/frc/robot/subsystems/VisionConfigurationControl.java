@@ -89,7 +89,8 @@ public class VisionConfigurationControl extends SubsystemBase {
     enum ConfigurationState {
         BOOT,
         DETECT,
-        COMMIT,
+        RESET_PIGEON,
+        RESET_POSE,
         DONE,
         ENABLED,
     }
@@ -139,14 +140,21 @@ public class VisionConfigurationControl extends SubsystemBase {
                 // convergence criteria as well.
                 if (delayTimer.hasElapsed(Constants.VisionStateMachine.detectDelay)) {
                     delayTimer.stop();
-                    moveToState(ConfigurationState.COMMIT);
+                    moveToState(ConfigurationState.RESET_PIGEON);
                 }
                 break;
 
-            case COMMIT:
-                // Move on to DONE state after a short delay to prevent using the Pigeon before
-                // the yaw has truly reset.
-                if (delayTimer.hasElapsed(Constants.VisionStateMachine.postCommitDelay)) {
+            case RESET_PIGEON:
+                // Reset the pigeon, and then delay briefly before resetting the pose.
+                if (delayTimer.hasElapsed(Constants.VisionStateMachine.pigeonResetDelay)) {
+                    delayTimer.stop();
+                    moveToState(ConfigurationState.RESET_POSE);
+                }
+                break;
+
+            case RESET_POSE:
+                // Reset the pose, and then delay briefly before declaring victory.
+                if (delayTimer.hasElapsed(Constants.VisionStateMachine.poseResetDelay)) {
                     delayTimer.stop();
                     moveToState(ConfigurationState.DONE);
                 }
@@ -232,23 +240,34 @@ public class VisionConfigurationControl extends SubsystemBase {
                 delayTimer.start();
                 break;
 
-            case COMMIT:
-                // Reset Pigeon and pose estimate to current estimate
+            case RESET_PIGEON:
+                // Reset Pigeon
                 detectedPose = drivetrain.getState().Pose;
-                resetPigeonAndPose(detectedPose);
+                resetPigeon(detectedPose);
 
-                // Disable vision updates for a brief period
+                // Disable vision updates until we're done
                 visionUpdateSubsystem.setVisionAlgorithm(VisionAlgorithm.DISABLED);
+
+                // Reset the delay timer
                 delayTimer.reset();
                 delayTimer.start();
+                break;
 
-                localizationCompleted = true;
+            case RESET_POSE:
+                // Reset the pose
+                resetPose(detectedPose);
+
+                // Reset the delay timer
+                delayTimer.reset();
+                delayTimer.start();
                 break;
 
             case DONE:
+                // Declare victory
                 // Resume vision updates with MT2 after a brief settling period
                 visionUpdateSubsystem.setVisionAlgorithm(VisionAlgorithm.MT2);
                 visionUpdateSubsystem.setTrustLevel(VisionTrustLevel.MT2_PRE_MATCH);
+                localizationCompleted = true;
                 break;
 
             case ENABLED:
@@ -281,7 +300,7 @@ public class VisionConfigurationControl extends SubsystemBase {
             case DETECT:
                 pattern = detectPattern;
                 break;
-            case COMMIT:
+            case RESET_PIGEON:
                 pattern = commitPattern;
                 break;
             case DONE:
@@ -300,9 +319,15 @@ public class VisionConfigurationControl extends SubsystemBase {
     }
 
     private void resetPigeonAndPose(Pose2d pose) {
+        // There may be races here! We probably need to add a wait for update here to make sure the
+        // Pigeon's yaw updates before the pose is reset. Better would be to insert a delay.
         Pigeon2 pigeon = drivetrain.getPigeon2();
         pigeon.setYaw(pose.getRotation().getDegrees());
-        pigeon.getYaw().refresh();
+
+        // Force a wait for the update to the yaw before allowing the pose reset to happen. Otherwise, the 
+        // pose might still see the stale value. The state machine normally handles this by splitting these two
+        // actions, but here, we need to set both because we're about to be enabled.
+        pigeon.getYaw().waitForUpdate(0.1);
 
         double degrees = pigeon.getYaw().getValueAsDouble();
         Rotation2d rotation = pigeon.getRotation2d();
@@ -310,10 +335,18 @@ public class VisionConfigurationControl extends SubsystemBase {
         DogLog.log("VisionControl/PigeonResetRotation", rotation.getDegrees());
         DogLog.log("VisionControl/PigeonResetTarget", pose.getRotation().getDegrees());
 
-
         drivetrain.resetPose(pose);
 
         DogLog.log("VisionControl/ResetPose", pose);
+    }
+
+    private void resetPigeon(Pose2d pose) {
+        Pigeon2 pigeon = drivetrain.getPigeon2();
+        pigeon.setYaw(pose.getRotation().getDegrees());
+    }
+
+    private void resetPose(Pose2d pose) {
+        drivetrain.resetPose(pose);
     }
 
 }
