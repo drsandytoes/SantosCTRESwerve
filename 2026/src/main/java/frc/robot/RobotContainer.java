@@ -266,4 +266,8 @@ public class RobotContainer {
         }
     }
 
+    public void disableVisionSim() {
+        visionSim.setEnabled(false);
+    }
+
 }

@@ -23,11 +23,18 @@ public class VisionSimulation {
     private double simulatedDistance = 0.0;
     private Rotation2d simulatedRotation = Rotation2d.kZero; // Relative to field
 
+    // Enabled state
+    private boolean enabled = true;
+
     public VisionSimulation() {
         try {
             fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded); // WPILib provides the file automatically
         } catch (Exception e) {
         }
+    }
+
+    public void setEnabled(boolean isEnabled) {
+        enabled = isEnabled;
     }
 
     public void setTargetTag(int tag) {
@@ -66,6 +73,10 @@ public class VisionSimulation {
     }
 
     public PoseEstimate getMT1Estimate(Rotation2d gyroRotation) {
+        if (!enabled) {
+            return null;
+        }
+
         // MT1 ignores the gyro, but has more error than MT2.
         Pose2d pose = robotPoseForTag(targetPose, simulatedRotation, simulatedDistance);
 
@@ -102,6 +113,10 @@ public class VisionSimulation {
     }
 
     public PoseEstimate getMT2Estimate(Rotation2d gyroRotation) {
+        if (!enabled) {
+            return null;
+        }
+
         // Compute a location relative to the tag that maintains the same distance, but obeys
         // the passed in gyroRotation.
         Pose2d pose = robotPoseForTag(targetPose, gyroRotation, simulatedDistance);
